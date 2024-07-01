@@ -1,18 +1,42 @@
-import { useSatate } from "react";
+import { dbService } from "fbase";
+import { collection, addDoc, onSnapshot } from 'firebase/firestore'
+import { useState, useEffect } from "react";
+import Nweet from "components/Nweet";
 
-const Home = () => {
-  const [nweet,setNweet] = useSatate("");
-  const onSubmit = (event) => {
-    event.preventDefault();
-  };
+
+const Home = ({ userObj }) => {
+  const [nweet,setNweet] = useState("");
+  const [nweets, setNweets] = useState([]);
+
+
+    useEffect(() =>{
+        onSnapshot(collection(dbService, "nweets"), (Snapshot) =>{
+          const newArray = Snapshot.docs.map((document) => ({
+            id: document.id,
+            ...document.data()
+          }));
+          setNweets(newArray);
+        })
+    }, [])
+
     const onChange = (event) => {
       event.preventDefault();
       const {
         target: { value },
       } = event;
     setNweet(value);
-  };
+  }
+  const onSubmit = async(event) => {
+    event.preventDefault();
+    await addDoc(collection(dbService, "nweets"), {
+      text: nweet,
+      created: Date.now(),
+      creatorId: userObj.uid,
+
+  });
+  }
   return (
+    <>
     <form onSubmit={onSubmit}>
       <input
       value={nweet}
@@ -23,6 +47,19 @@ const Home = () => {
       />
       <input type="submit" value="Nweet" />
     </form>
+    
+    <div>
+      {
+       nweets.map((nweet) => (
+        <Nweet 
+        key={nweet.id} 
+        nweetObj={nweet} 
+        isOwner={nweet.creatorId === userObj.uid}
+          />
+       ))
+      }
+    </div>
+    </>
   );
 };
 export default Home;
